@@ -34,6 +34,10 @@ pub var windowFlags: u32 = 0; // flags of the window, to add a flag to the windo
 pub var useDeltaTime: bool = false;
 pub var minimumStep: f32 = 1;
 
+// engine set types
+
+pub const actionFn: type = fn () bool;
+
 // global consts set by engine
 
 pub const zuKEY_BASE = 1;
@@ -41,7 +45,7 @@ pub const zuMOUSE_BASE = 1000;
 pub const zuCONTROLLER_BASE = 2000;
 pub const zuACTION_BASE = 3000;
 
-// Define engine triggers
+/// recognized engine triggers
 pub const triggers = enum(u32) {
     zuUNKNOWN = 0,
 
