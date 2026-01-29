@@ -45,8 +45,10 @@ pub const zuMOUSE_BASE = 1000;
 pub const zuCONTROLLER_BASE = 2000;
 pub const zuACTION_BASE = 3000;
 
+pub const Scene = eScenehandler.Scene;
+
 /// recognized engine triggers
-pub const triggers = enum(u32) {
+pub const Triggers = enum(u32) {
     zuUNKNOWN = 0,
 
     // keyboard triggers
