@@ -1,51 +1,65 @@
 const std = @import("std");
-const eng = @import("eng");
+const eng = @import("eng.zig");
 
-pub const Process = struct {
-    activator: *eng.Triggers,
-    timeHeld: i32,
+const Scene = eng.Scene;
 
-    onPress: *fn (scene: *eng.Scene) void,
-    onRelease: *fn (scene: *eng.Scene) void,
-    onHeld: *fn (scene: *eng.Scene) void,
-    endWhen: *fn (scene: *eng.Scene, forceClose: bool) bool,
-    deinitFunc: *fn (alloc: std.mem.Allocator) void,
+pub const ProcessVTable = struct {
+    open: *const fn (self: *AnyProcess, dt: u32, ctx: *Scene) bool,
+    shut: *const fn (self: *AnyProcess, dt: u32, ctx: *Scene) bool,
+    deinit: *const fn (self: *AnyProcess, alloc: std.mem.Allocator) bool,
+};
 
-    pub fn init(eActivator: *eng.Triggers, eOnPress: *fn (scene: *eng.Scene) void, eOnRelease: *fn (scene: *eng.Scene) void, eOnHeld: *fn (scene: *eng.Scene) void, eEndWhen: *fn (scene: *eng.Scene, forceClose: bool) bool, eDeinit: *fn (scene: *eng.Scene, alloc: std.mem.Allocator) void) Process {
-        return .{
-            .activator = eActivator,
-            .timeHeld = 0,
-
-            .onHeld = eOnHeld,
-            .onPress = eOnPress,
-            .onRelease = eOnRelease,
-
-            .endWhen = eEndWhen,
-            .deinit = eDeinit,
-        };
+pub const AnyProcess = struct {
+    ctm: *anyopaque,
+    pvt: *const ProcessVTable,
+    ctmT: type,
+    pub fn Wrap(comptime T: type) type {
+        return struct { val: T };
     }
-
-    pub fn deinit(self: *Process, alloc: std.mem.Allocator) void {
-        self.deinitFunc(alloc);
+    pub fn makeCtm(comptime T: type, init_val: T, allocator: std.mem.Allocator) !*anyopaque {
+        const s = try allocator.create(T);
+        s.* = init_val;
+        return s;
     }
-
-    pub fn update(self: Process, scene: *eng.Scene, pressed: bool, forceClose: bool) bool {
-        if (pressed) {
-            self.timeHeld += 1;
-            self.onHeld(scene);
-        }
-
-        if (self.timeHeld == 1)
-            self.onPress(scene);
-
-        if (!pressed and self.timeHeld != 0)
-            self.onRelease(scene);
-
-        if (!pressed)
-            self.timeHeld = 0;
-
-        const ret: bool = self.endWhen(scene, forceClose);
-
-        return ret;
+    pub fn open(self: *AnyProcess, dt: u32, ctx: *Scene) bool {
+        return self.pvt.open(self, dt, ctx);
+    }
+    pub fn shut(self: *AnyProcess, dt: u32, ctx: *Scene) bool {
+        return self.pvt.shut(self, dt, ctx);
+    }
+    pub fn deinit(self: *AnyProcess, alloc: std.mem.Allocator) bool {
+        return self.pvt.deinit(self, alloc);
     }
 };
+
+pub fn makeProcess(comptime T: type, comptime pvt: *const ProcessVTable, comptime init: *const fn () *T) *AnyProcess {
+    const ctm = init();
+    return @constCast(&AnyProcess{
+        .ctm = ctm,
+        .pvt = pvt,
+        .ctmT = T,
+    });
+}
+
+pub fn makeSimpleProcess(comptime open: *const fn () bool, comptime shut: *const fn () bool) *AnyProcess {
+    const fnholder = struct {
+        fn openfn(self: *AnyProcess, dt: u32, ctx: *Scene) bool {
+            _ = self;
+            _ = dt;
+            _ = ctx;
+            return open();
+        }
+        fn shutfn(self: *AnyProcess, dt: u32, ctx: *Scene) bool {
+            _ = self;
+            _ = dt;
+            _ = ctx;
+            return shut();
+        }
+    };
+
+    return makeProcess(void, &.{
+        .open = &fnholder.openfn,
+        .shut = &fnholder.shutfn,
+        .deinit = &eng.noDeinit,
+    }, &eng.voidCtm);
+}

@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const fileLoaderMod = b.createModule(.{
-        .root_source_file = b.path("config/fileLoader.zig"),
+        .root_source_file = b.path("config/fileloader.zig"),
     });
 
     const engMod = b.createModule(.{
@@ -30,30 +30,19 @@ pub fn build(b: *std.Build) void {
 
     // Add config modules to executable
     exe.root_module.addImport("config", confMod);
-    exe.root_module.addImport("fileLoader", fileLoaderMod);
+    exe.root_module.addImport("fileloader", fileLoaderMod);
 
     fileLoaderMod.addImport("eng", engMod);
 
     engMod.addImport("config", confMod);
-    engMod.addImport("fileLoader", fileLoaderMod);
-    engMod.addIncludePath(b.path("libs/SDL2/include"));
+    engMod.addImport("fileloader", fileLoaderMod);
 
     // SDL2 linking
-    exe.addIncludePath(b.path("libs/SDL2/include"));
-    exe.addLibraryPath(b.path("libs/SDL2/lib"));
-    exe.linkSystemLibrary("user32");
-    exe.linkSystemLibrary("gdi32");
-    exe.linkSystemLibrary("winmm");
-    exe.linkSystemLibrary("imm32");
-    exe.linkSystemLibrary("ole32");
-    exe.linkSystemLibrary("oleaut32");
-    exe.linkSystemLibrary("version");
-    exe.linkSystemLibrary("setupapi");
-    exe.linkSystemLibrary("shell32");
-    exe.linkSystemLibrary("advapi32");
-    exe.linkSystemLibrary("shlwapi");
     exe.linkSystemLibrary("SDL2");
+    exe.linkSystemLibrary("SDL2_ttf");
+    exe.linkSystemLibrary("SDL2_gfx");
     exe.linkSystemLibrary("SDL2main");
+    exe.linkSystemLibrary("m");
     exe.linkLibC();
 
     b.installArtifact(exe);
